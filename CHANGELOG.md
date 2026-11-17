@@ -3,6 +3,14 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan penomoran [Semantic Versioning](https://semver.org/lang/id/).
 Isi bagian versi terbaru di bawah ini dipakai otomatis sebagai keterangan rilis.
 
+## [1.1.1] - 2026-11-18
+
+### Diperbaiki
+- Tombol Kembali Android (termasuk gestur geser dari tepi kiri) tidak lagi menutup aplikasi. Kini naik satu level ke menu sebelumnya, menutup dialog yang terbuka lebih dulu, dan dari menu utama meminta tekan dua kali untuk keluar.
+
+### Diubah
+- Menambahkan plugin native `@capacitor/app` untuk menangani tombol Kembali.
+
 ## [1.1.0] - 2026-11-17
 
 ### Ditambahkan

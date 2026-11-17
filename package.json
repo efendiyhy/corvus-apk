@@ -5,6 +5,7 @@
   "description": "Pembungkus native (Capacitor) untuk Corvus Academy. Dibangun otomatis oleh GitHub Actions.",
   "dependencies": {
     "@capacitor/android": "6.2.3",
+    "@capacitor/app": "6.0.2",
     "@capacitor/core": "6.2.3",
     "@capacitor/filesystem": "6.0.4",
     "@capacitor/share": "6.0.4",
