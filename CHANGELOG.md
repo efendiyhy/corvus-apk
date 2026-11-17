@@ -3,6 +3,12 @@
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/) dan penomoran [Semantic Versioning](https://semver.org/lang/id/).
 Isi bagian versi terbaru di bawah ini dipakai otomatis sebagai keterangan rilis.
 
+## [1.2.0] - 2026-11-17
+
+### Diubah
+- Aplikasi kini ditandatangani dengan kunci tetap. Pembaruan berikutnya dapat dipasang langsung di atas versi ini tanpa menghapus aplikasi.
+- Pengguna versi 1.1.1 atau lebih lama perlu menghapus aplikasi lama sekali, lalu memasang versi ini.
+
 ## [1.1.1] - 2026-11-18
 
 ### Diperbaiki

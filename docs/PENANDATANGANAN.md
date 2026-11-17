@@ -19,12 +19,10 @@ membuat kunci dan mengisi tiga secret.
 
 Perlu JDK (perintah `keytool`). Cek dengan `keytool -help`.
 
-```bash
-keytool -genkeypair -v \
-  -keystore corvus-release.jks \
-  -alias corvus \
-  -keyalg RSA -keysize 2048 -validity 10000 \
-  -dname "CN=Corvus Academy, O=EK-Instrumentation, C=ID"
+Jalankan sebagai **satu baris** (berlaku di Windows PowerShell, Linux, dan macOS):
+
+```
+keytool -genkeypair -v -keystore corvus-release.jks -alias corvus -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Corvus Academy, O=EK-Instrumentation, C=ID"
 ```
 
 Perintah akan meminta kata sandi keystore dan kata sandi kunci. Pakai
