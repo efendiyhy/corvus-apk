@@ -1,0 +1,29 @@
+{
+  "appId": "com.ekinstrumentation.corvus",
+  "appName": "Corvus Academy",
+  "webDir": "www",
+  "backgroundColor": "#3b1480",
+  "server": {
+    "url": "https://ekinstru.web.app/corvus/index.html",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "appendUserAgent": "CorvusApp",
+    "allowMixedContent": false,
+    "backgroundColor": "#3b1480"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#2e1065",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_INSIDE"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#3b1480",
+      "overlaysWebView": false
+    }
+  }
+}

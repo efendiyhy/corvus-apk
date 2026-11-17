@@ -1,0 +1,136 @@
+# Membangun dan merilis APK Corvus Academy.
+# Cara merilis: ubah angka di file VERSION, tulis ringkasan di CHANGELOG.md (bagian "## [versi]"), lalu push ke main.
+# Workflow membangun APK bertanda tangan, menghitung checksum, dan membuat GitHub Release v<versi> dengan keterangan otomatis.
+# Aplikasi hanya membungkus https://ekinstru.web.app/corvus/, jadi materi/soal tidak perlu APK baru.
+
+name: Build & Release APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['VERSION', 'res/**', 'www/**', 'capacitor.config.json', 'package.json', 'scripts/**', '.github/workflows/build.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baca versi
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER="$(tr -d '[:space:]' < VERSION)"
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Rilis v$VER sudah ada. Naikkan angka di VERSION untuk merilis versi baru."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.v.outputs.skip != 'true'
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        if: steps.v.outputs.skip != 'true'
+        with:
+          node-version: '20'
+
+      - name: Siapkan proyek Android (Capacitor)
+        if: steps.v.outputs.skip != 'true'
+        run: |
+          npm install --no-audit --no-fund
+          npx cap add android
+          python3 scripts/patch-android.py
+          npx cap sync android
+
+      - name: Siapkan kunci penanda tangan
+        if: steps.v.outputs.skip != 'true'
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          KS="$RUNNER_TEMP/corvus-release.jks"
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASSWORD" ]; then
+            echo "$KS_B64" | base64 -d > "$KS"
+            ALIAS="${KS_ALIAS_SECRET:-corvus}"; PASS="$KS_PASSWORD"
+            echo "Memakai kunci tetap dari GitHub Secrets."
+          else
+            ALIAS=corvus; PASS="$(openssl rand -hex 16)"
+            keytool -genkeypair -keystore "$KS" -alias "$ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=Corvus Academy, O=EK-Instrumentation, C=ID"
+            echo "::warning::Secrets ANDROID_KEYSTORE_BASE64/ANDROID_KEYSTORE_PASSWORD belum diisi. APK ditandatangani kunci sekali pakai, sehingga pembaruan harus didahului hapus aplikasi lama."
+          fi
+          echo "::add-mask::$PASS"
+          echo "KS_PATH=$KS" >> "$GITHUB_ENV"; echo "KS_ALIAS=$ALIAS" >> "$GITHUB_ENV"; echo "KS_PASS=$PASS" >> "$GITHUB_ENV"
+
+      - name: Bangun APK rilis
+        if: steps.v.outputs.skip != 'true'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Siapkan berkas rilis
+        if: steps.v.outputs.skip != 'true'
+        env:
+          VER: ${{ steps.v.outputs.ver }}
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk "out/corvus-academy-v$VER.apk"
+          cp "out/corvus-academy-v$VER.apk" out/corvus-academy.apk
+          (cd out && sha256sum "corvus-academy-v$VER.apk" > "corvus-academy-v$VER.apk.sha256")
+          SHA="$(cut -d' ' -f1 "out/corvus-academy-v$VER.apk.sha256")"
+          SIZE="$(du -h "out/corvus-academy-v$VER.apk" | cut -f1)"
+          DATE="$(TZ=Asia/Jakarta date +'%d %B %Y')"
+          awk -v h="## [$VER]" 'index($0,"## [")==1 { f = (index($0,h)==1); next } f' CHANGELOG.md > notes_changes.md
+          [ -s notes_changes.md ] || echo "Pembaruan dan perbaikan." > notes_changes.md
+          {
+            echo "# Corvus Academy $VER"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Versi** | $VER |"
+            echo "| **Tanggal rilis** | $DATE |"
+            echo "| **Ukuran** | $SIZE |"
+            echo "| **Android** | 5.1 (Lollipop) ke atas |"
+            echo "| **SHA-256** | \`$SHA\` |"
+            echo
+            echo "## Yang baru"
+            echo
+            sed 's/^### /#### /' notes_changes.md
+            echo
+            echo "## Cara memasang"
+            echo "1. Unduh **corvus-academy-v$VER.apk** di bagian *Assets* di bawah."
+            echo "2. Buka berkas tersebut. Bila diminta, izinkan *Pasang dari sumber ini*."
+            echo "3. Buka **Corvus Academy** dan masuk dengan akun Anda."
+            echo
+            echo "Aplikasi akan memberi tahu bila ada versi baru. Kunjungi https://ekinstru.web.app/corvus/ untuk versi web."
+            echo
+            echo "_Corvus Academy by EK Instrumentation_"
+          } > RELEASE_NOTES.md
+
+      - uses: actions/upload-artifact@v4
+        if: steps.v.outputs.skip != 'true'
+        with:
+          name: corvus-academy-apk
+          path: out/
+
+      - name: Terbitkan GitHub Release
+        if: steps.v.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ steps.v.outputs.ver }}
+        run: |
+          gh release create "v$VER" out/*.apk out/*.sha256 \
+            --title "Corvus Academy $VER" --notes-file RELEASE_NOTES.md --latest --target "${{ github.sha }}"
